@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.routers import profiles, system
+from app.routers import jobs, profiles, system
 
 
 app = FastAPI(
@@ -12,3 +12,4 @@ app = FastAPI(
 
 app.include_router(system.router)
 app.include_router(profiles.router)
+app.include_router(jobs.router)
