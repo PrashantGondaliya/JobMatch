@@ -22,3 +22,11 @@ def health_check():
         "app": "JobMatch AI",
         "version": "0.1.0"
     }
+
+@app.get("/version")
+def get_version():
+    return {
+        "app": "JobMatch AI",
+        "version": "0.1.0",
+        "environment": "development"
+    }
