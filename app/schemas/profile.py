@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CandidateProfileCreate(BaseModel):
@@ -14,3 +14,5 @@ class CandidateProfileCreate(BaseModel):
 
 class CandidateProfile(CandidateProfileCreate):
     id: int
+
+    model_config = ConfigDict(from_attributes=True)

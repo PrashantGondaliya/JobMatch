@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from sqlmodel import Session, select
 
-from app.data.in_memory_db import profiles
+from app.database import get_session
+from app.models.db_models import CandidateProfileDB
 from app.schemas.profile import CandidateProfile, CandidateProfileCreate
 
 
@@ -8,26 +10,35 @@ router = APIRouter(prefix="/profiles", tags=["Profiles"])
 
 
 @router.post("", response_model=CandidateProfile)
-def create_profile(profile_data: CandidateProfileCreate):
-    new_profile = CandidateProfile(
-        id=len(profiles) + 1,
-        **profile_data.model_dump()
-    )
+def create_profile(
+    profile_data: CandidateProfileCreate,
+    session: Session = Depends(get_session),
+):
+    new_profile = CandidateProfileDB(**profile_data.model_dump())
 
-    profiles.append(new_profile)
+    session.add(new_profile)
+    session.commit()
+    session.refresh(new_profile)
 
     return new_profile
 
 
 @router.get("", response_model=list[CandidateProfile])
-def get_profiles():
+def get_profiles(session: Session = Depends(get_session)):
+    statement = select(CandidateProfileDB)
+    profiles = session.exec(statement).all()
+
     return profiles
 
 
 @router.get("/{profile_id}", response_model=CandidateProfile)
-def get_profile(profile_id: int):
-    for profile in profiles:
-        if profile.id == profile_id:
-            return profile
+def get_profile(
+    profile_id: int,
+    session: Session = Depends(get_session),
+):
+    profile = session.get(CandidateProfileDB, profile_id)
 
-    raise HTTPException(status_code=404, detail="Profile not found")
+    if profile is None:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    return profile
