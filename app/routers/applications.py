@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.database import get_session
-from app.models.db_models import CandidateProfileDB, JobApplicationDB, JobDB
+from app.repositories import applications as application_repository
+from app.repositories import jobs as job_repository
+from app.repositories import profiles as profile_repository
 from app.schemas.application import (
     ApplicationCreate,
     ApplicationStatus,
@@ -29,22 +31,27 @@ def create_application(
     application_data: ApplicationCreate,
     session: Session = Depends(get_session),
 ):
-    profile = session.get(CandidateProfileDB, application_data.profile_id)
+    profile = profile_repository.get_profile_by_id(
+        session=session,
+        profile_id=application_data.profile_id,
+    )
 
     if profile is None:
         raise HTTPException(status_code=404, detail="Profile not found")
 
-    job = session.get(JobDB, application_data.job_id)
+    job = job_repository.get_job_by_id(
+        session=session,
+        job_id=application_data.job_id,
+    )
 
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    duplicate_statement = select(JobApplicationDB).where(
-        JobApplicationDB.profile_id == application_data.profile_id,
-        JobApplicationDB.job_id == application_data.job_id,
+    existing_application = application_repository.get_application_by_profile_and_job(
+        session=session,
+        profile_id=application_data.profile_id,
+        job_id=application_data.job_id,
     )
-
-    existing_application = session.exec(duplicate_statement).first()
 
     if existing_application is not None:
         raise HTTPException(
@@ -52,36 +59,21 @@ def create_application(
             detail="Application already exists for this profile and job",
         )
 
-    now = get_current_time()
-
     applied_at = None
 
     if application_data.status == ApplicationStatus.APPLIED:
-        applied_at = now
+        applied_at = get_current_time()
 
-    new_application = JobApplicationDB(
-        profile_id=application_data.profile_id,
-        job_id=application_data.job_id,
-        status=application_data.status.value,
-        notes=application_data.notes,
-        created_at=now,
-        updated_at=now,
+    return application_repository.create_application(
+        session=session,
+        application_data=application_data,
         applied_at=applied_at,
     )
-
-    session.add(new_application)
-    session.commit()
-    session.refresh(new_application)
-
-    return new_application
 
 
 @router.get("", response_model=list[JobApplication])
 def get_applications(session: Session = Depends(get_session)):
-    statement = select(JobApplicationDB)
-    applications = session.exec(statement).all()
-
-    return applications
+    return application_repository.get_all_applications(session=session)
 
 
 @router.get("/profile/{profile_id}", response_model=list[JobApplication])
@@ -89,18 +81,18 @@ def get_applications_for_profile(
     profile_id: int,
     session: Session = Depends(get_session),
 ):
-    profile = session.get(CandidateProfileDB, profile_id)
+    profile = profile_repository.get_profile_by_id(
+        session=session,
+        profile_id=profile_id,
+    )
 
     if profile is None:
         raise HTTPException(status_code=404, detail="Profile not found")
 
-    statement = select(JobApplicationDB).where(
-        JobApplicationDB.profile_id == profile_id
+    return application_repository.get_applications_by_profile_id(
+        session=session,
+        profile_id=profile_id,
     )
-
-    applications = session.exec(statement).all()
-
-    return applications
 
 
 @router.get("/{application_id}", response_model=JobApplication)
@@ -108,7 +100,10 @@ def get_application(
     application_id: int,
     session: Session = Depends(get_session),
 ):
-    application = session.get(JobApplicationDB, application_id)
+    application = application_repository.get_application_by_id(
+        session=session,
+        application_id=application_id,
+    )
 
     if application is None:
         raise HTTPException(status_code=404, detail="Application not found")
@@ -122,25 +117,29 @@ def update_application_status(
     status_update: ApplicationStatusUpdate,
     session: Session = Depends(get_session),
 ):
-    application = session.get(JobApplicationDB, application_id)
+    application = application_repository.get_application_by_id(
+        session=session,
+        application_id=application_id,
+    )
 
     if application is None:
         raise HTTPException(status_code=404, detail="Application not found")
 
     now = get_current_time()
 
-    application.status = status_update.status.value
-    application.notes = status_update.notes
-    application.updated_at = now
+    applied_at = application.applied_at
 
     if (
         status_update.status == ApplicationStatus.APPLIED
-        and application.applied_at is None
+        and applied_at is None
     ):
-        application.applied_at = now
+        applied_at = now
 
-    session.add(application)
-    session.commit()
-    session.refresh(application)
-
-    return application
+    return application_repository.update_application_status(
+        session=session,
+        application=application,
+        new_status=status_update.status,
+        notes=status_update.notes,
+        updated_at=now,
+        applied_at=applied_at,
+    )
