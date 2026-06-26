@@ -1,13 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session
 
-from app.connectors.greenhouse import (
-    GreenhouseConnectorError,
-    fetch_greenhouse_jobs,
-)
+from app.connectors.greenhouse import GreenhouseConnectorError
 from app.database import get_session
 from app.repositories import jobs as job_repository
 from app.schemas.job import Job, JobCreate
+from app.schemas.job_source import JobFetchSummary
+from app.services.job_fetching import fetch_greenhouse_jobs_into_database
 
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
@@ -24,42 +23,25 @@ def create_job(
     )
 
 
-@router.post("/fetch/greenhouse/{company_slug}")
+@router.post(
+    "/fetch/greenhouse/{company_slug}",
+    response_model=JobFetchSummary,
+)
 def fetch_jobs_from_greenhouse(
     company_slug: str,
     session: Session = Depends(get_session),
 ):
     try:
-        fetched_jobs = fetch_greenhouse_jobs(company_slug=company_slug)
+        return fetch_greenhouse_jobs_into_database(
+            session=session,
+            company_slug=company_slug,
+        )
 
     except GreenhouseConnectorError as error:
         raise HTTPException(
             status_code=502,
             detail=str(error),
         ) from error
-
-    created_jobs = []
-    skipped_jobs = []
-
-    for job_data in fetched_jobs:
-        job, was_created = job_repository.create_job_if_not_exists(
-            session=session,
-            job_data=job_data,
-        )
-
-        if was_created:
-            created_jobs.append(job)
-        else:
-            skipped_jobs.append(job)
-
-    return {
-        "source": "greenhouse",
-        "company_slug": company_slug,
-        "fetched_count": len(fetched_jobs),
-        "created_count": len(created_jobs),
-        "skipped_count": len(skipped_jobs),
-        "created_jobs": created_jobs,
-    }
 
 
 @router.get("", response_model=list[Job])

@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.database import create_db_and_tables
-from app.routers import applications, jobs, matches, profiles, system
+from app.routers import applications, job_sources, jobs, matches, profiles, system
 
 
 @asynccontextmanager
@@ -25,3 +25,4 @@ app.include_router(profiles.router)
 app.include_router(jobs.router)
 app.include_router(matches.router)
 app.include_router(applications.router)
+app.include_router(job_sources.router)

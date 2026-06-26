@@ -59,3 +59,19 @@ class JobApplicationDB(SQLModel, table=True):
     created_at: datetime = Field(default_factory=get_current_time)
     updated_at: datetime = Field(default_factory=get_current_time)
     applied_at: datetime | None = None
+
+
+class JobSourceDB(SQLModel, table=True):
+    __tablename__ = "job_sources"
+
+    id: int | None = Field(default=None, primary_key=True)
+
+    source_type: str = "greenhouse"
+    company_slug: str
+    display_name: str
+
+    is_active: bool = True
+
+    created_at: datetime = Field(default_factory=get_current_time)
+    updated_at: datetime = Field(default_factory=get_current_time)
+    last_fetched_at: datetime | None = None
