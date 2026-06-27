@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, JSON
+from sqlalchemy import Column, JSON, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -75,3 +75,40 @@ class JobSourceDB(SQLModel, table=True):
     created_at: datetime = Field(default_factory=get_current_time)
     updated_at: datetime = Field(default_factory=get_current_time)
     last_fetched_at: datetime | None = None
+
+
+class JobMatchDB(SQLModel, table=True):
+    __tablename__ = "job_matches"
+
+    __table_args__ = (
+        UniqueConstraint("profile_id", "job_id", name="uq_job_match_profile_job"),
+    )
+
+    id: int | None = Field(default=None, primary_key=True)
+
+    profile_id: int = Field(foreign_key="candidate_profiles.id")
+    job_id: int = Field(foreign_key="jobs.id")
+
+    job_title: str
+    company: str
+    location: str
+    apply_url: str
+
+    match_percentage: float
+
+    skill_score: float
+    location_score: float
+    remote_score: float
+    salary_score: float
+
+    matched_skills: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    missing_skills: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    required_skills: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+
+    match_reasons: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    concerns: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+
+    explanation: str
+
+    created_at: datetime = Field(default_factory=get_current_time)
+    updated_at: datetime = Field(default_factory=get_current_time)
