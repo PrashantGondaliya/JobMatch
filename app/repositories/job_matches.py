@@ -103,6 +103,35 @@ def get_matches_by_profile_id(
     return list(session.exec(statement).all())
 
 
+def get_filtered_matches_by_profile_id(
+    session: Session,
+    profile_id: int,
+    limit: int,
+    offset: int,
+    min_score: float | None = None,
+) -> tuple[list[JobMatchDB], int]:
+    conditions = [
+        JobMatchDB.profile_id == profile_id
+    ]
+
+    if min_score is not None:
+        conditions.append(JobMatchDB.match_percentage >= min_score)
+
+    statement = (
+        select(JobMatchDB)
+        .where(*conditions)
+        .order_by(JobMatchDB.match_percentage.desc())
+    )
+
+    all_matches = list(session.exec(statement).all())
+
+    total_count = len(all_matches)
+
+    paginated_matches = all_matches[offset: offset + limit]
+
+    return paginated_matches, total_count
+
+
 def delete_matches_by_profile_id(
     session: Session,
     profile_id: int,

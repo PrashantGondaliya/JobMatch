@@ -60,6 +60,15 @@ class StoredJobMatch(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class StoredJobMatchListResponse(BaseModel):
+    items: list[StoredJobMatch]
+    total_count: int
+    returned_count: int
+    limit: int
+    offset: int
+    min_score: float | None = None
+
+
 class MatchRefreshSummary(BaseModel):
     profile_id: int
     total_jobs_checked: int

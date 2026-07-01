@@ -6,7 +6,11 @@ from app.repositories import job_matches as job_match_repository
 from app.repositories import jobs as job_repository
 from app.repositories import profiles as profile_repository
 from app.schemas.job import Job
-from app.schemas.match import MatchRefreshSummary, StoredJobMatch
+from app.schemas.match import (
+    MatchRefreshSummary,
+    StoredJobMatch,
+    StoredJobMatchListResponse,
+)
 from app.schemas.profile import CandidateProfile
 from app.services.matching import generate_job_matches
 
@@ -74,14 +78,27 @@ def get_saved_matches_for_profile(
     session: Session,
     profile_id: int,
     limit: int = 50,
-) -> list[StoredJobMatch]:
-    matches_db = job_match_repository.get_matches_by_profile_id(
+    offset: int = 0,
+    min_score: float | None = None,
+) -> StoredJobMatchListResponse:
+    matches_db, total_count = job_match_repository.get_filtered_matches_by_profile_id(
         session=session,
         profile_id=profile_id,
         limit=limit,
+        offset=offset,
+        min_score=min_score,
     )
 
-    return [
+    items = [
         StoredJobMatch.model_validate(match_db)
         for match_db in matches_db
     ]
+
+    return StoredJobMatchListResponse(
+        items=items,
+        total_count=total_count,
+        returned_count=len(items),
+        limit=limit,
+        offset=offset,
+        min_score=min_score,
+    )

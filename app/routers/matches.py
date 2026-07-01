@@ -5,7 +5,11 @@ from app.database import get_session
 from app.repositories import jobs as job_repository
 from app.repositories import profiles as profile_repository
 from app.schemas.job import Job
-from app.schemas.match import JobMatch, MatchRefreshSummary, StoredJobMatch
+from app.schemas.match import (
+    JobMatch,
+    MatchRefreshSummary,
+    StoredJobMatchListResponse,
+)
 from app.schemas.profile import CandidateProfile
 from app.services.match_persistence import (
     get_saved_matches_for_profile,
@@ -38,11 +42,13 @@ def refresh_profile_matches(
 
 @router.get(
     "/profile/{profile_id}/saved",
-    response_model=list[StoredJobMatch],
+    response_model=StoredJobMatchListResponse,
 )
 def get_saved_profile_matches(
     profile_id: int,
     limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    min_score: float | None = Query(default=None, ge=0, le=100),
     session: Session = Depends(get_session),
 ):
     profile_db = profile_repository.get_profile_by_id(
@@ -57,12 +63,17 @@ def get_saved_profile_matches(
         session=session,
         profile_id=profile_id,
         limit=limit,
+        offset=offset,
+        min_score=min_score,
     )
 
 
 @router.get("/profile/{profile_id}", response_model=list[JobMatch])
 def get_live_matches_for_profile(
     profile_id: int,
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    min_score: float | None = Query(default=None, ge=0, le=100),
     session: Session = Depends(get_session),
 ):
     profile_db = profile_repository.get_profile_by_id(
@@ -82,4 +93,13 @@ def get_live_matches_for_profile(
         for job_db in jobs_db
     ]
 
-    return generate_job_matches(profile=profile, jobs=jobs)
+    live_matches = generate_job_matches(profile=profile, jobs=jobs)
+
+    if min_score is not None:
+        live_matches = [
+            match
+            for match in live_matches
+            if match.match_percentage >= min_score
+        ]
+
+    return live_matches[offset: offset + limit]

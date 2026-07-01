@@ -19,3 +19,11 @@ class Job(JobCreate):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class JobListResponse(BaseModel):
+    items: list[Job]
+    total_count: int
+    returned_count: int
+    limit: int
+    offset: int
