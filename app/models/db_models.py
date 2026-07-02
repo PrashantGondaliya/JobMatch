@@ -7,6 +7,20 @@ from sqlmodel import Field, SQLModel
 def get_current_time() -> datetime:
     return datetime.now(timezone.utc)
 
+class UserDB(SQLModel, table=True):
+    __tablename__ = "users"
+
+    id: int | None = Field(default=None, primary_key=True)
+
+    email: str = Field(index=True, unique=True)
+    full_name: str
+
+    hashed_password: str
+
+    is_active: bool = True
+
+    created_at: datetime = Field(default_factory=get_current_time)
+    updated_at: datetime = Field(default_factory=get_current_time)
 
 class CandidateProfileDB(SQLModel, table=True):
     __tablename__ = "candidate_profiles"
