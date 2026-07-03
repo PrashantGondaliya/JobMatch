@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import Session
 
 from app.database import get_session
+from app.dependencies.auth import get_current_user
+from app.models.db_models import UserDB
 from app.repositories import jobs as job_repository
 from app.repositories import profiles as profile_repository
 from app.schemas.job import Job
@@ -28,7 +30,17 @@ router = APIRouter(prefix="/matches", tags=["Matches"])
 def refresh_profile_matches(
     profile_id: int,
     session: Session = Depends(get_session),
+    current_user: UserDB = Depends(get_current_user),
 ):
+    profile_db = profile_repository.get_profile_by_id_and_user_id(
+        session=session,
+        profile_id=profile_id,
+        user_id=current_user.id,
+    )
+
+    if profile_db is None:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
     summary = refresh_matches_for_profile(
         session=session,
         profile_id=profile_id,
@@ -50,10 +62,12 @@ def get_saved_profile_matches(
     offset: int = Query(default=0, ge=0),
     min_score: float | None = Query(default=None, ge=0, le=100),
     session: Session = Depends(get_session),
+    current_user: UserDB = Depends(get_current_user),
 ):
-    profile_db = profile_repository.get_profile_by_id(
+    profile_db = profile_repository.get_profile_by_id_and_user_id(
         session=session,
         profile_id=profile_id,
+        user_id=current_user.id,
     )
 
     if profile_db is None:
@@ -75,10 +89,12 @@ def get_live_matches_for_profile(
     offset: int = Query(default=0, ge=0),
     min_score: float | None = Query(default=None, ge=0, le=100),
     session: Session = Depends(get_session),
+    current_user: UserDB = Depends(get_current_user),
 ):
-    profile_db = profile_repository.get_profile_by_id(
+    profile_db = profile_repository.get_profile_by_id_and_user_id(
         session=session,
         profile_id=profile_id,
+        user_id=current_user.id,
     )
 
     if profile_db is None:

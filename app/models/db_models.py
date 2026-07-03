@@ -26,6 +26,7 @@ class CandidateProfileDB(SQLModel, table=True):
     __tablename__ = "candidate_profiles"
 
     id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id")
 
     full_name: str
     target_role: str

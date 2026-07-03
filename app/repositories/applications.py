@@ -31,6 +31,20 @@ def get_all_applications(session: Session) -> list[JobApplicationDB]:
     return list(session.exec(statement).all())
 
 
+def get_applications_by_profile_ids(
+    session: Session,
+    profile_ids: list[int],
+) -> list[JobApplicationDB]:
+    if not profile_ids:
+        return []
+
+    statement = select(JobApplicationDB).where(
+        JobApplicationDB.profile_id.in_(profile_ids)
+    )
+
+    return list(session.exec(statement).all())
+
+
 def get_application_by_id(
     session: Session,
     application_id: int,
