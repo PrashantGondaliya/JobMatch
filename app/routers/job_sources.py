@@ -18,7 +18,13 @@ from app.services.job_fetching import (
 )
 
 
-router = APIRouter(prefix="/job-sources", tags=["Job Sources"])
+from app.dependencies.auth import require_admin_user
+
+router = APIRouter(
+    prefix="/job-sources",
+    tags=["Job Sources"],
+    dependencies=[Depends(require_admin_user)],
+)
 
 
 def get_current_time() -> datetime:

@@ -51,3 +51,15 @@ def get_current_user(
         )
 
     return user
+
+
+def require_admin_user(
+    current_user: UserDB = Depends(get_current_user),
+) -> UserDB:
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+
+    return current_user

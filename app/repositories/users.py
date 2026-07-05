@@ -23,6 +23,7 @@ def create_user(
         email=normalize_email(user_data.email),
         full_name=user_data.full_name,
         hashed_password=hash_password(user_data.password),
+        role="user",
     )
 
     session.add(user)
@@ -48,6 +49,21 @@ def get_user_by_id(
     user_id: int,
 ) -> UserDB | None:
     return session.get(UserDB, user_id)
+
+
+def update_user_role(
+    session: Session,
+    user: UserDB,
+    role: str,
+) -> UserDB:
+    user.role = role
+    user.updated_at = get_current_time()
+
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    return user
 
 
 def update_user_last_modified(

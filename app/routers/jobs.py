@@ -3,6 +3,8 @@ from sqlmodel import Session
 
 from app.connectors.greenhouse import GreenhouseConnectorError
 from app.database import get_session
+from app.dependencies.auth import require_admin_user
+from app.models.db_models import UserDB
 from app.repositories import jobs as job_repository
 from app.schemas.job import Job, JobCreate, JobListResponse
 from app.schemas.job_source import JobFetchSummary
@@ -16,6 +18,7 @@ router = APIRouter(prefix="/jobs", tags=["Jobs"])
 def create_job(
     job_data: JobCreate,
     session: Session = Depends(get_session),
+    admin_user: UserDB = Depends(require_admin_user),
 ):
     return job_repository.create_job(
         session=session,
@@ -30,6 +33,7 @@ def create_job(
 def fetch_jobs_from_greenhouse(
     company_slug: str,
     session: Session = Depends(get_session),
+    admin_user: UserDB = Depends(require_admin_user),
 ):
     try:
         return fetch_greenhouse_jobs_into_database(
