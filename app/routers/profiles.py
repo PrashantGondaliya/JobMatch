@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlmodel import Session
 
 from app.database import get_session
@@ -6,6 +6,7 @@ from app.dependencies.auth import get_current_user
 from app.models.db_models import UserDB
 from app.repositories import profiles as profile_repository
 from app.schemas.profile import CandidateProfile, CandidateProfileCreate
+from app.services.ownership import get_owned_profile_or_404, get_user_id
 
 
 router = APIRouter(prefix="/profiles", tags=["Profiles"])
@@ -20,7 +21,7 @@ def create_profile(
     return profile_repository.create_profile(
         session=session,
         profile_data=profile_data,
-        user_id=current_user.id,
+        user_id=get_user_id(current_user),
     )
 
 
@@ -31,7 +32,7 @@ def get_profiles(
 ):
     return profile_repository.get_all_profiles_by_user_id(
         session=session,
-        user_id=current_user.id,
+        user_id=get_user_id(current_user),
     )
 
 
@@ -41,13 +42,8 @@ def get_profile(
     session: Session = Depends(get_session),
     current_user: UserDB = Depends(get_current_user),
 ):
-    profile = profile_repository.get_profile_by_id_and_user_id(
+    return get_owned_profile_or_404(
         session=session,
         profile_id=profile_id,
-        user_id=current_user.id,
+        current_user=current_user,
     )
-
-    if profile is None:
-        raise HTTPException(status_code=404, detail="Profile not found")
-
-    return profile

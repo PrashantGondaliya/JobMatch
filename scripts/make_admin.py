@@ -1,9 +1,15 @@
 import sys
+from pathlib import Path
 
 from sqlmodel import Session
 
-from app.database import engine
-from app.repositories import users as user_repository
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.append(str(PROJECT_ROOT))
+
+
+from app.database import engine  # noqa: E402
+from app.repositories import users as user_repository  # noqa: E402
 
 
 def make_admin(email: str) -> int:

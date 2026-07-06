@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session
 
 from app.database import get_session
 from app.dependencies.auth import get_current_user
 from app.models.db_models import UserDB
 from app.repositories import jobs as job_repository
-from app.repositories import profiles as profile_repository
 from app.schemas.job import Job
 from app.schemas.match import (
     JobMatch,
@@ -18,6 +17,7 @@ from app.services.match_persistence import (
     refresh_matches_for_profile,
 )
 from app.services.matching import generate_job_matches
+from app.services.ownership import get_owned_profile_or_404
 
 
 router = APIRouter(prefix="/matches", tags=["Matches"])
@@ -32,24 +32,16 @@ def refresh_profile_matches(
     session: Session = Depends(get_session),
     current_user: UserDB = Depends(get_current_user),
 ):
-    profile_db = profile_repository.get_profile_by_id_and_user_id(
+    get_owned_profile_or_404(
         session=session,
         profile_id=profile_id,
-        user_id=current_user.id,
+        current_user=current_user,
     )
 
-    if profile_db is None:
-        raise HTTPException(status_code=404, detail="Profile not found")
-
-    summary = refresh_matches_for_profile(
+    return refresh_matches_for_profile(
         session=session,
         profile_id=profile_id,
     )
-
-    if summary is None:
-        raise HTTPException(status_code=404, detail="Profile not found")
-
-    return summary
 
 
 @router.get(
@@ -64,14 +56,11 @@ def get_saved_profile_matches(
     session: Session = Depends(get_session),
     current_user: UserDB = Depends(get_current_user),
 ):
-    profile_db = profile_repository.get_profile_by_id_and_user_id(
+    get_owned_profile_or_404(
         session=session,
         profile_id=profile_id,
-        user_id=current_user.id,
+        current_user=current_user,
     )
-
-    if profile_db is None:
-        raise HTTPException(status_code=404, detail="Profile not found")
 
     return get_saved_matches_for_profile(
         session=session,
@@ -91,14 +80,11 @@ def get_live_matches_for_profile(
     session: Session = Depends(get_session),
     current_user: UserDB = Depends(get_current_user),
 ):
-    profile_db = profile_repository.get_profile_by_id_and_user_id(
+    profile_db = get_owned_profile_or_404(
         session=session,
         profile_id=profile_id,
-        user_id=current_user.id,
+        current_user=current_user,
     )
-
-    if profile_db is None:
-        raise HTTPException(status_code=404, detail="Profile not found")
 
     jobs_db = job_repository.get_all_jobs(session=session)
 
