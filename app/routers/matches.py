@@ -4,20 +4,16 @@ from sqlmodel import Session
 from app.database import get_session
 from app.dependencies.auth import get_current_user
 from app.models.db_models import UserDB
-from app.repositories import jobs as job_repository
-from app.schemas.job import Job
 from app.schemas.match import (
     JobMatch,
     MatchRefreshSummary,
     StoredJobMatchListResponse,
 )
-from app.schemas.profile import CandidateProfile
 from app.services.match_persistence import (
-    get_saved_matches_for_profile,
-    refresh_matches_for_profile,
+    generate_live_matches_for_user_profile,
+    get_saved_matches_for_user_profile,
+    refresh_matches_for_user_profile,
 )
-from app.services.matching import generate_job_matches
-from app.services.ownership import get_owned_profile_or_404
 
 
 router = APIRouter(prefix="/matches", tags=["Matches"])
@@ -32,15 +28,10 @@ def refresh_profile_matches(
     session: Session = Depends(get_session),
     current_user: UserDB = Depends(get_current_user),
 ):
-    get_owned_profile_or_404(
+    return refresh_matches_for_user_profile(
         session=session,
         profile_id=profile_id,
         current_user=current_user,
-    )
-
-    return refresh_matches_for_profile(
-        session=session,
-        profile_id=profile_id,
     )
 
 
@@ -56,15 +47,10 @@ def get_saved_profile_matches(
     session: Session = Depends(get_session),
     current_user: UserDB = Depends(get_current_user),
 ):
-    get_owned_profile_or_404(
+    return get_saved_matches_for_user_profile(
         session=session,
         profile_id=profile_id,
         current_user=current_user,
-    )
-
-    return get_saved_matches_for_profile(
-        session=session,
-        profile_id=profile_id,
         limit=limit,
         offset=offset,
         min_score=min_score,
@@ -80,28 +66,11 @@ def get_live_matches_for_profile(
     session: Session = Depends(get_session),
     current_user: UserDB = Depends(get_current_user),
 ):
-    profile_db = get_owned_profile_or_404(
+    return generate_live_matches_for_user_profile(
         session=session,
         profile_id=profile_id,
         current_user=current_user,
+        limit=limit,
+        offset=offset,
+        min_score=min_score,
     )
-
-    jobs_db = job_repository.get_all_jobs(session=session)
-
-    profile = CandidateProfile.model_validate(profile_db)
-
-    jobs = [
-        Job.model_validate(job_db)
-        for job_db in jobs_db
-    ]
-
-    live_matches = generate_job_matches(profile=profile, jobs=jobs)
-
-    if min_score is not None:
-        live_matches = [
-            match
-            for match in live_matches
-            if match.match_percentage >= min_score
-        ]
-
-    return live_matches[offset: offset + limit]
