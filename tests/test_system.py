@@ -10,3 +10,4 @@ def test_health_check(client: TestClient):
 
     assert data["status"] == "ok"
     assert data["app"] == "JobMatch AI"
+    assert "environment" in data

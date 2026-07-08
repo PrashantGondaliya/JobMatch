@@ -1,5 +1,7 @@
 from fastapi import APIRouter
 
+from app.core.config import settings
+
 
 router = APIRouter(tags=["System"])
 
@@ -7,8 +9,8 @@ router = APIRouter(tags=["System"])
 @router.get("/")
 def root():
     return {
-        "message": "Welcome to JobMatch AI",
-        "status": "running"
+        "message": f"Welcome to {settings.app_name}",
+        "environment": settings.environment,
     }
 
 
@@ -16,15 +18,14 @@ def root():
 def health_check():
     return {
         "status": "ok",
-        "app": "JobMatch AI",
-        "version": "0.1.0"
+        "app": settings.app_name,
+        "environment": settings.environment,
     }
 
 
 @router.get("/version")
-def get_version():
+def version():
     return {
-        "app": "JobMatch AI",
         "version": "0.1.0",
-        "environment": "development"
+        "app": settings.app_name,
     }
