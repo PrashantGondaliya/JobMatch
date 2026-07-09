@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -45,6 +45,20 @@ class Settings(BaseSettings):
             for origin in self.backend_cors_origins.split(",")
             if origin.strip()
         ]
+
+    @model_validator(mode="after")
+    def validate_production_settings(self):
+        if self.is_production:
+            if self.debug:
+                raise ValueError("DEBUG must be false in production.")
+
+            if self.secret_key == "change-me-in-development":
+                raise ValueError("SECRET_KEY must be changed in production.")
+
+            if self.database_url.startswith("sqlite"):
+                raise ValueError("SQLite should not be used in production.")
+
+        return self
 
 
 @lru_cache
