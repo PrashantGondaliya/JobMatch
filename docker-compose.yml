@@ -1,0 +1,34 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jobmatch_api
+    command: sh -c "python scripts/pre_start.py && python scripts/start.py"
+    ports:
+      - "8000:8000"
+    environment:
+      APP_NAME: "JobMatch AI"
+      ENVIRONMENT: "development"
+      DEBUG: "true"
+      DATABASE_URL: "postgresql+psycopg://jobmatch:jobmatch@db:5432/jobmatch"
+      SECRET_KEY: "change-this-local-docker-secret"
+      ACCESS_TOKEN_EXPIRE_MINUTES: "60"
+      BACKEND_CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
+    depends_on:
+      - db
+
+  db:
+    image: postgres:16
+    container_name: jobmatch_db
+    environment:
+      POSTGRES_USER: jobmatch
+      POSTGRES_PASSWORD: jobmatch
+      POSTGRES_DB: jobmatch
+    ports:
+      - "5432:5432"
+    volumes:
+      - jobmatch_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  jobmatch_postgres_data:

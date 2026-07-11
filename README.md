@@ -61,3 +61,12 @@ Before deploying:
 - [ ] `alembic upgrade head` runs successfully
 - [ ] CORS origins are set correctly
 - [ ] `/health` endpoint works
+
+## Running with Docker
+
+This project includes Docker support for running the FastAPI backend with PostgreSQL.
+
+### Build and run
+
+```bash
+docker compose up --build
